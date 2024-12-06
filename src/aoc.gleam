@@ -1,4 +1,4 @@
-import day4/p2
+import day5/p2
 import gleam/io
 
 pub fn main() {
