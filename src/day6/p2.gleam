@@ -1,3 +1,4 @@
+/// Doesn't work (number too high)
 import file_streams/file_stream
 import gleam/dict
 import gleam/io
@@ -41,7 +42,8 @@ pub fn solution() -> Int {
   let assert Ok(stream) = file_stream.open_read("input/day6/1")
   let #(map, guard, row_amount, col_amount) =
     load_map(stream, dict.new(), None, 0, 0)
-  escape(map, guard, set.new(), set.new(), row_amount, col_amount)
+
+  escape(map, guard, set.new(), row_amount, col_amount)
 }
 
 fn load_map(
@@ -72,7 +74,7 @@ fn load_map(
             _ -> acc.1
           }
 
-          #(dict.insert(acc.0, Point(row, col), entity), guard)
+          #(dict.insert(acc.0, point, entity), guard)
         })
 
       load_map(stream, map, guard, row + 1, string.length(line))
@@ -89,7 +91,6 @@ fn load_map(
 fn escape(
   map: Map,
   guard: Guard,
-  visited: VisitedMap,
   placed_obstacles: PlacedObstacles,
   row_amount: Int,
   col_amount: Int,
@@ -100,18 +101,10 @@ fn escape(
     }
     False -> {
       let placed_obstacles =
-        could_add_obstacle(
-          guard,
-          map,
-          visited,
-          placed_obstacles,
-          row_amount,
-          col_amount,
-        )
+        could_add_obstacle(guard, map, placed_obstacles, row_amount, col_amount)
       let guard = move(guard, map)
-      let visited = set.insert(visited, #(guard.point, guard.dir))
 
-      escape(map, guard, visited, placed_obstacles, row_amount, col_amount)
+      escape(map, guard, placed_obstacles, row_amount, col_amount)
     }
   }
 }
@@ -139,60 +132,48 @@ fn lookup(point: Point, direction: Direction) -> Point {
 fn could_add_obstacle(
   ghost: Guard,
   map: Map,
-  visited: VisitedMap,
   placed_obstacles: PlacedObstacles,
   row_amount,
   col_amount,
 ) -> PlacedObstacles {
   let Guard(point, dir) = ghost
-  io.debug(#(point, dir))
-  case set.contains(placed_obstacles, point) {
-    True -> placed_obstacles
+  let next_pos = lookup(point, dir)
+  case out_of_bounds(next_pos, row_amount, col_amount) {
     False ->
-      case both_empty(point, dir, map) {
-        True ->
-          case
-            // move the guard forward and rotate ('cause of the obstacle)
-            move(ghost, map)
-            |> rotate
-            |> loop_lookup(map, visited, row_amount, col_amount)
-          {
-            True -> {
-              // let placed_at =
-              //   lookup(point, dir)
-              //   |> lookup(dir)
-              // io.debug("placed at: " <> string.inspect(placed_at))
-              set.insert(placed_obstacles, point)
-            }
-            False -> placed_obstacles
-          }
-        False -> placed_obstacles
-      }
-  }
-}
-
-// check there is no obstacle in both next forward positions
-fn both_empty(point: Point, dir: Direction, map: Map) -> Bool {
-  case
-    lookup(point, dir)
-    |> dict.get(map, _)
-  {
-    Ok(entity) ->
-      case entity {
-        Empty ->
-          case lookup(point, dir) |> lookup(dir) |> dict.get(map, _) {
-            Ok(entity) -> {
+      case set.contains(placed_obstacles, next_pos) {
+        True -> placed_obstacles
+        False ->
+          case dict.get(map, next_pos) {
+            Ok(entity) ->
               case entity {
-                Empty -> True
-                _ -> False
+                Empty ->
+                  case
+                    loop_lookup(
+                      ghost,
+                      map |> dict.insert(next_pos, Wall),
+                      set.new(),
+                      row_amount,
+                      col_amount,
+                    )
+                  {
+                    True -> {
+                      let placed_at = next_pos
+                      io.debug(
+                        "was at: "
+                        <> string.inspect(ghost)
+                        <> " placed at: "
+                        <> string.inspect(placed_at),
+                      )
+                      set.insert(placed_obstacles, placed_at)
+                    }
+                    False -> placed_obstacles
+                  }
+                Wall -> placed_obstacles
               }
-            }
-            _ -> False
+            Error(_) -> placed_obstacles
           }
-        _ -> False
       }
-
-    _ -> False
+    True -> placed_obstacles
   }
 }
 
@@ -203,13 +184,20 @@ fn loop_lookup(
   row_amount: Int,
   col_amount: Int,
 ) -> Bool {
-  io.debug(ghost)
   case out_of_bounds(ghost.point, row_amount, col_amount) {
     True -> False
     False ->
       case set.contains(visited, #(ghost.point, ghost.dir)) {
-        True -> True
+        True -> {
+          // io.debug(
+          //   "visited: "
+          //   <> string.inspect(set.size(visited))
+          //   <> string.inspect(#(ghost.point, ghost.dir)),
+          // )
+          True
+        }
         False -> {
+          let visited = set.insert(visited, #(ghost.point, ghost.dir))
           move(ghost, map)
           |> loop_lookup(map, visited, row_amount, col_amount)
         }
