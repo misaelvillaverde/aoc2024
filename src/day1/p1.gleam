@@ -8,7 +8,7 @@ pub fn solution() -> Int {
   let left = []
   let right = []
 
-  let assert Ok(stream) = file_stream.open_read("input/1_1")
+  let assert Ok(stream) = file_stream.open_read("input/day1/1")
 
   result.unwrap(read(stream, left, right), 0)
 }
@@ -45,18 +45,18 @@ fn read(
     Error(_) -> {
       let left = list.sort(left, int.compare)
       let right = list.sort(right, int.compare)
-      Ok(sum(left, right, 0))
+      Ok(sum(0, left, right))
     }
   }
 }
 
-fn sum(left: List(Int), right: List(Int), acc: Int) -> Int {
+fn sum(acc: Int, left: List(Int), right: List(Int)) -> Int {
   case left, right {
     [a, ..l], [b, ..r] -> {
-      sum(l, r, int.absolute_value(a - b) + acc)
+      int.absolute_value(a - b)
+      |> int.add(acc)
+      |> sum(l, r)
     }
-    [], [] -> acc
-    [], [_, ..] -> 0
-    [_, ..], [] -> 0
+    _, _ -> acc
   }
 }
