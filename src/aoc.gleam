@@ -1,6 +1,6 @@
-import day8/p2
+import day9/p1
 import gleam/io
 
 pub fn main() {
-  io.debug(p2.solution())
+  io.debug(p1.solution())
 }
