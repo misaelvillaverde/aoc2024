@@ -28,9 +28,7 @@ pub fn solution() -> Int {
   let assert Ok(stream) = file_stream.open_read("input/day10/1")
   let #(map, zeros) = load_map(dict.new(), set.new(), stream, 0)
 
-  set.fold(zeros, 0, fn(acc, zero) {
-    acc + trailhead(zero, 0, map)
-  })
+  set.fold(zeros, 0, fn(acc, zero) { acc + trailhead(zero, 0, map) })
 }
 
 fn load_map(
